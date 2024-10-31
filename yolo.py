@@ -215,25 +215,6 @@ class YOLO(object):
                 min(image.size[0], np.floor(right).astype('int32')),
             )
 
-            # 计算与前一帧的位移
-            if self.previous_box:
-                prev_top, prev_left, prev_bottom, prev_right = self.previous_box
-                displacement = np.sqrt((top - prev_top) ** 2 + (left - prev_left) ** 2)
-                scale_change = abs((bottom - top) - (prev_bottom - prev_top))
-
-                # 如果位移或形变超过阈值，则保存图片
-                if displacement > 250 or scale_change > 50:
-                    #self.capture_count += 1  # 计数器加1
-                    timestamp = int(time.time())  # 获取当前时间戳
-                    filename = f"{timestamp}_1_movementDetected.png"
-                    image.save(os.path.join(dir_path, filename), quality=95, subsampling=0)  # 保存截图
-                    print(f"运动幅度较大，截图已保存：{filename}")
-
-
-            # 更新上一次的框位置
-            self.previous_box = (top, left, bottom, right)
-
-
             label = '{} {:.2f}'.format(predicted_class, score)
             draw = ImageDraw.Draw(image)
             label_size = draw.textsize(label, font)
@@ -251,6 +232,24 @@ class YOLO(object):
             draw.text(text_origin, str(label,'UTF-8'), fill=(0, 0, 0), font=font)
             del draw
             #time.sleep(1)
+
+            # 计算与前一帧的位移
+            if self.previous_box:
+                prev_top, prev_left, prev_bottom, prev_right = self.previous_box
+                displacement = np.sqrt((top - prev_top) ** 2 + (left - prev_left) ** 2)
+                scale_change = abs((bottom - top) - (prev_bottom - prev_top))
+
+                # 如果位移或形变超过阈值，则保存图片
+                if displacement > 250 or scale_change > 50:
+                    #self.capture_count += 1  # 计数器加1
+                    timestamp = int(time.time())  # 获取当前时间戳
+                    filename = f"{timestamp}_1_movementDetected.png"
+                    image.save(os.path.join(dir_path, filename), quality=95, subsampling=0)  # 保存截图
+                    print(f"运动幅度较大，截图已保存：{filename}")
+
+
+            # 更新上一次的框位置
+            self.previous_box = (top, left, bottom, right)
 
         return image
 
