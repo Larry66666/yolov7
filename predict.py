@@ -123,15 +123,15 @@ if __name__ == "__main__":
             frame = cv2.cvtColor(np.array(frame_detected), cv2.COLOR_RGB2BGR)
 
             # 运动检测逻辑
-            if previous_frame is not None:
-                diff = cv2.absdiff(previous_frame, frame)  # 计算帧差
-                gray = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
-                _, thresh = cv2.threshold(gray, 25, 255, cv2.THRESH_BINARY)
-                if np.sum(thresh) > 0:  # 检测到运动
-                    cv2.imwrite("motion_screenshot.png", frame)  # 保存截图
-                    #print("检测到运动，已截图。")
-
-            previous_frame = frame.copy()  # 更新前一帧
+            # if previous_frame is not None:
+            #     diff = cv2.absdiff(previous_frame, frame)  # 计算帧差
+            #     gray = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
+            #     _, thresh = cv2.threshold(gray, 25, 255, cv2.THRESH_BINARY)
+            #     if np.sum(thresh) > 0:  # 检测到运动
+            #         cv2.imwrite("motion_screenshot.png", frame)  # 保存截图
+            #         #print("检测到运动，已截图。")
+            #
+            # previous_frame = frame.copy()  # 更新前一帧
             
             fps  = ( fps + (1./(time.time()-t1)) ) / 2
             #print("fps= %.2f"%(fps))

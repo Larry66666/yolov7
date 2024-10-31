@@ -78,7 +78,7 @@ class YOLO(object):
     def __init__(self, **kwargs):
         self.__dict__.update(self._defaults)
         self.previous_box = None  # 用于存储上一帧人体的位置
-        self.capture_count = 0  # 初始化计数器
+        #self.capture_count = 0  # 初始化计数器
         for name, value in kwargs.items():
             setattr(self, name, value)
             self._defaults[name] = value 
@@ -120,7 +120,8 @@ class YOLO(object):
     #---------------------------------------------------#
     #   检测图片
     #---------------------------------------------------#
-    def detect_image(self, image, crop = True, count = False):
+    def detect_image(self, image, crop = False, count = False):
+        dir_path = "moved_detected_img"
         #---------------------------------------------------#
         #   计算输入图片的高和宽
         #---------------------------------------------------#
@@ -195,7 +196,7 @@ class YOLO(object):
                     os.makedirs(dir_save_path)
                 crop_image = image.crop([left, top, right, bottom])
                 crop_image.save(os.path.join(dir_save_path, "crop_" + str(i) + ".png"), quality=95, subsampling=0)
-                print("save crop_" + str(i) + ".png to " + dir_save_path)
+                #print("save crop_" + str(i) + ".png to " + dir_save_path)
         #---------------------------------------------------------#
         #   图像绘制
         #---------------------------------------------------------#
@@ -221,9 +222,13 @@ class YOLO(object):
                 scale_change = abs((bottom - top) - (prev_bottom - prev_top))
 
                 # 如果位移或形变超过阈值，则保存图片
-                if displacement > 200 or scale_change > 100:
-                    print("检测到运动！！！！！！！！！！！！！！！！！！！！！！！！！！！！")
-                    image.save("movement_detected.png")  # 或其他处理逻辑
+                if displacement > 250 or scale_change > 50:
+                    #self.capture_count += 1  # 计数器加1
+                    timestamp = int(time.time())  # 获取当前时间戳
+                    filename = f"{timestamp}_1_movementDetected.png"
+                    image.save(os.path.join(dir_path, filename), quality=95, subsampling=0)  # 保存截图
+                    print(f"运动幅度较大，截图已保存：{filename}")
+
 
             # 更新上一次的框位置
             self.previous_box = (top, left, bottom, right)
@@ -233,7 +238,7 @@ class YOLO(object):
             draw = ImageDraw.Draw(image)
             label_size = draw.textsize(label, font)
             label = label.encode('utf-8')
-            print(label, top, left, bottom, right)
+            #print(label, top, left, bottom, right)
             
             if top - label_size[1] >= 0:
                 text_origin = np.array([left, top - label_size[1]])
@@ -245,6 +250,7 @@ class YOLO(object):
             draw.rectangle([tuple(text_origin), tuple(text_origin + label_size)], fill=self.colors[c])
             draw.text(text_origin, str(label,'UTF-8'), fill=(0, 0, 0), font=font)
             del draw
+            #time.sleep(1)
 
         return image
 
