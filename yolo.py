@@ -1,7 +1,8 @@
 import colorsys
 import os
 import time
-
+import requests
+import movement_sender
 import cv2
 import numpy as np
 import torch
@@ -78,6 +79,8 @@ class YOLO(object):
     def __init__(self, **kwargs):
         self.__dict__.update(self._defaults)
         self.previous_box = None  # 用于存储上一帧人体的位置
+        self.last_capture_time = 0  # 上次截图的时间戳
+        self.capture_interval = 5  # 截图的时间间隔（秒）
         #self.capture_count = 0  # 初始化计数器
         for name, value in kwargs.items():
             setattr(self, name, value)
@@ -121,7 +124,7 @@ class YOLO(object):
     #   检测图片
     #---------------------------------------------------#
     def detect_image(self, image, crop = False, count = False):
-        dir_path = "moved_detected_img"
+        dir_path = "D:\\yolov7-pytorch-master\\moved_detected_img"
         #---------------------------------------------------#
         #   计算输入图片的高和宽
         #---------------------------------------------------#
@@ -200,6 +203,8 @@ class YOLO(object):
         #---------------------------------------------------------#
         #   图像绘制
         #---------------------------------------------------------#
+        # 控制发送逻辑
+        can_send = True  # 初始状态为可以发送
         for i, c in list(enumerate(top_label)):
             predicted_class = self.class_names[int(c)]
             if predicted_class != 'person':  # 只对‘person’类进行处理
@@ -233,20 +238,28 @@ class YOLO(object):
             del draw
             #time.sleep(1)
 
+            current_time = time.time()
             # 计算与前一帧的位移
             if self.previous_box:
                 prev_top, prev_left, prev_bottom, prev_right = self.previous_box
                 displacement = np.sqrt((top - prev_top) ** 2 + (left - prev_left) ** 2)
                 scale_change = abs((bottom - top) - (prev_bottom - prev_top))
 
-                # 如果位移或形变超过阈值，则保存图片
-                if displacement > 250 or scale_change > 50:
-                    #self.capture_count += 1  # 计数器加1
-                    timestamp = int(time.time())  # 获取当前时间戳
-                    filename = f"{timestamp}_1_movementDetected.png"
-                    image.save(os.path.join(dir_path, filename), quality=95, subsampling=0)  # 保存截图
-                    print(f"运动幅度较大，截图已保存：{filename}")
+                # 如果位移或形变超过阈值，并且可以发送，则保存图片
+                if (displacement > 50 or scale_change > 30) and (current_time - self.last_capture_time > self.capture_interval):
+                    if can_send:  # 只有在可以发送时才发送
+                        timestamp = int(time.time())
+                        filename = f"{timestamp}_1_movementDetected.png"
+                        image.save(os.path.join(dir_path, filename), quality=95, subsampling=0)
+                        print(f"运动幅度较大，截图已保存：{filename}")
+                        self.last_capture_time = current_time
 
+                        # 创建 MovementData 对象并发送数据
+                        movement_data = movement_sender.MovementData(os.path.join(dir_path, filename))
+                        movement_sender.send_movement_data(movement_data)
+                        can_send = False  # 发送后禁用
+                else:
+                    can_send = True  # 允许再次发送
 
             # 更新上一次的框位置
             self.previous_box = (top, left, bottom, right)

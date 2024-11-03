@@ -8,7 +8,8 @@ lfw/
 logs/
 model_data/
 .temp_map_out/
-
+*.mp4
+moved_detected_img/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
