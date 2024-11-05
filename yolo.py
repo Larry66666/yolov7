@@ -10,13 +10,12 @@ import torch.nn as nn
 from PIL import ImageDraw, ImageFont, Image
 
 from nets.yolo import YoloBody
+from upload_to_ftp import upload_to_ftp
 from utils.utils import (cvtColor, get_anchors, get_classes, preprocess_input,
                          resize_image, show_config)
 from utils.utils_bbox import DecodeBox, DecodeBoxNP
 
-'''
-训练自己的数据集必看注释！
-'''
+
 class YOLO(object):
     _defaults = {
         #--------------------------------------------------------------------------#
@@ -246,17 +245,20 @@ class YOLO(object):
                 scale_change = abs((bottom - top) - (prev_bottom - prev_top))
 
                 # 如果位移或形变超过阈值，并且可以发送，则保存图片
-                if (displacement > 50 or scale_change > 30) and (current_time - self.last_capture_time > self.capture_interval):
+                if (displacement > 25 or scale_change > 10) and (current_time - self.last_capture_time > self.capture_interval):
                     if can_send:  # 只有在可以发送时才发送
                         timestamp = int(time.time())
                         filename = f"{timestamp}_1_movementDetected.png"
-                        image.save(os.path.join(dir_path, filename), quality=95, subsampling=0)
+                        filepath = os.path.join(dir_path, filename)
+                        image.save(filepath, quality=95, subsampling=0)
                         print(f"运动幅度较大，截图已保存：{filename}")
                         self.last_capture_time = current_time
 
                         # 创建 MovementData 对象并发送数据
-                        movement_data = movement_sender.MovementData(os.path.join(dir_path, filename))
-                        movement_sender.send_movement_data(movement_data)
+                        # movement_data = movement_sender.MovementData(os.path.join(dir_path, filename))
+                        # movement_sender.send_movement_data(movement_data)
+                        # upload_to_ftp(filepath, server='172.20.10.2', username='t1', password='123456', ftp_dir='/detected_img_dir')
+                        upload_to_ftp(filepath, server='59.110.238.62', username='Bjut_sat', password='123456', ftp_dir='/home/Bjut_sat/ftp/uploads')
                         can_send = False  # 发送后禁用
                 else:
                     can_send = True  # 允许再次发送

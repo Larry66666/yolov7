@@ -10,12 +10,12 @@ class MovementData:
     def to_dict(self):
         # 根据要求构造请求体
         return {
-            "encodePackageSize": 30000,
+            "encodePackageSize": 5000,
             "clientFilePath": os.path.dirname(self.image_path) + "\\",  # 文件夹路径
             "fileName": [os.path.basename(self.image_path)],  # 仅包含文件名
             "ipAndPortInfoSend": [
                 {
-                    "ip": "192.168.192.182",  # 根据实际情况修改
+                    "ip": "192.168.165.118",  # 根据实际情况修改
                     "port": 9000,
                     "probability": 1
                 }
@@ -24,7 +24,8 @@ class MovementData:
         }
 
 def send_movement_data(movement_data):
-    url = "http://172.21.13.210:8887/file/send"  # 发送端服务的 IP 和端口
+    # url = "http://172.21.13.210:8887/file/send"  # 发送端服务的 IP 和端口
+    url = "http://localhost:8887/file/send"
     headers = {"Content-Type": "application/json"}
 
     request_body = movement_data.to_dict()
