@@ -11,16 +11,16 @@ def upload_to_ftp(filepath, server, username, password, ftp_dir):
         ftp.set_pasv(False)
 
         # 打开调试信息
-        ftp.set_debuglevel(2)
+        # ftp.set_debuglevel(2)
 
         # 进入根目录，确认路径是否正确
         ftp.cwd('/')  # 确保进入根目录
-        print(f"进入根目录成功，当前目录：{ftp.pwd()}")
+        # print(f"进入根目录成功，当前目录：{ftp.pwd()}")
 
         # 切换到目标目录
         try:
             ftp.cwd(ftp_dir)  # 切换到目标目录
-            print(f"成功切换到目录 {ftp_dir}")
+            # print(f"成功切换到目录 {ftp_dir}")
         except Exception as e:
             print(f"切换到目录 {ftp_dir} 时出错: {e}")
             return

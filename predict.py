@@ -6,6 +6,7 @@ import time
 import requests
 import cv2
 import os
+import global_var
 import numpy as np
 from PIL import Image
 
@@ -41,12 +42,12 @@ if __name__ == "__main__":
     #   保存视频时需要ctrl+c退出或者运行到最后一帧才会完成完整的保存步骤。
     #----------------------------------------------------------------------------------------------------------#
     video_path      = 0
-    video_save_path = "video_output.mp4"
+    video_save_path = "detected_video/"
     video_fps       = 25.0
     #----------------------------------------------------------------------------------------------------------#
     #   test_interval       用于指定测量fps的时候，图片检测的次数。理论上test_interval越大，fps越准确。
     #   fps_image_path      用于指定测试的fps图片
-    #   
+    #
     #   test_interval和fps_image_path仅在mode='fps'有效
     #----------------------------------------------------------------------------------------------------------#
     test_interval   = 100
@@ -54,14 +55,14 @@ if __name__ == "__main__":
     #-------------------------------------------------------------------------#
     #   dir_origin_path     指定了用于检测的图片的文件夹路径
     #   dir_save_path       指定了检测完图片的保存路径
-    #   
+    #
     #   dir_origin_path和dir_save_path仅在mode='dir_predict'时有效
     #-------------------------------------------------------------------------#
     dir_origin_path = "img/"
     dir_save_path   = "img_out/"
     #-------------------------------------------------------------------------#
     #   heatmap_save_path   热力图的保存路径，默认保存在model_data下
-    #   
+    #
     #   heatmap_save_path仅在mode='heatmap'有效
     #-------------------------------------------------------------------------#
     heatmap_save_path = "model_data/heatmap_vision.png"
@@ -99,61 +100,67 @@ if __name__ == "__main__":
 
     elif mode == "video":
         capture = cv2.VideoCapture(video_path)
-        if video_save_path!="":
-            fourcc  = cv2.VideoWriter_fourcc(*'XVID')
-            size    = (int(capture.get(cv2.CAP_PROP_FRAME_WIDTH)), int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT)))
-            out     = cv2.VideoWriter(video_save_path, fourcc, video_fps, size)
+        out = None
+        video_start_time = None
+        is_recording = False
 
         ref, frame = capture.read()
         if not ref:
             raise ValueError("未能正确读取摄像头（视频），请注意是否正确安装摄像头（是否正确填写视频路径）。")
 
         fps = 0.0
-        while(True):
+        while (True):
             t1 = time.time()
-            # 读取某一帧
             ref, frame = capture.read()
             if not ref:
                 break
-            # 转换帧格式为RGB，并进行检测
+
             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             frame_image = Image.fromarray(np.uint8(frame_rgb))
-            frame_detected = yolo.detect_image(frame_image)  # 调用 detect_image 进行目标检测
+            frame_detected = yolo.detect_image(frame_image)
 
-            # 转换回OpenCV格式
             frame = cv2.cvtColor(np.array(frame_detected), cv2.COLOR_RGB2BGR)
 
-            # 运动检测逻辑
-            # if previous_frame is not None:
-            #     diff = cv2.absdiff(previous_frame, frame)  # 计算帧差
-            #     gray = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
-            #     _, thresh = cv2.threshold(gray, 25, 255, cv2.THRESH_BINARY)
-            #     if np.sum(thresh) > 0:  # 检测到运动
-            #         cv2.imwrite("motion_screenshot.png", frame)  # 保存截图
-            #         #print("检测到运动，已截图。")
-            #
-            # previous_frame = frame.copy()  # 更新前一帧
-            
-            fps  = ( fps + (1./(time.time()-t1)) ) / 2
-            #print("fps= %.2f"%(fps))
+            fps = (fps + (1. / (time.time() - t1))) / 2
             frame = cv2.putText(frame, "fps= %.2f"%(fps), (0, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-            
-            cv2.imshow("video",frame)
-            c= cv2.waitKey(1) & 0xff 
-            if video_save_path!="":
+
+            cv2.imshow("video", frame)
+            c = cv2.waitKey(1) & 0xff
+
+            # 当can_record为1且当前未在录制视频时，开始录制视频
+            if global_var.can_record == 1 and not is_recording:
+                video_start_time = time.time()
+                fourcc = cv2.VideoWriter_fourcc(*'XVID')
+                size = (int(capture.get(cv2.CAP_PROP_FRAME_WIDTH)), int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT)))
+                # 根据当前时间生成时间戳并构建视频文件名
+                timestamp = int(time.time())
+                video_save_path = os.path.join("detected_video", f"{timestamp}_有人移动.mp4")
+                out = cv2.VideoWriter(video_save_path, fourcc, video_fps, size)
+                is_recording = True
+                print("开始录制视频")
+
+            # 当正在录制视频且已经录制了4秒时，停止录制视频
+            if is_recording and (time.time() - video_start_time >= 4):
+                is_recording = False
+                print("视频录制完成")
+                global_var.can_record = 0
+                out.release()
+                out = None
+
+            if video_save_path!= "" and global_var.can_record == 1 and is_recording:
                 out.write(frame)
 
-            if c==27: #ESC键
+            if c == 27:  # ESC键
                 capture.release()
                 break
 
         print("Video Detection Done!")
         capture.release()
-        if video_save_path!="":
+        if video_save_path!= "" and out is not None:
             print("Save processed video to the path :" + video_save_path)
             out.release()
         cv2.destroyAllWindows()
-        
+
     elif mode == "fps":
         img = Image.open(fps_image_path)
         tact_time = yolo.get_FPS(img, test_interval)
@@ -184,7 +191,7 @@ if __name__ == "__main__":
                 continue
             else:
                 yolo.detect_heatmap(image, heatmap_save_path)
-                
+
     elif mode == "export_onnx":
         yolo.convert_to_onnx(simplify, onnx_save_path)
 

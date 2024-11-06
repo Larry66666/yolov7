@@ -3,6 +3,7 @@ import os
 import time
 import requests
 import movement_sender
+import global_var
 import cv2
 import numpy as np
 import torch
@@ -83,9 +84,9 @@ class YOLO(object):
         #self.capture_count = 0  # 初始化计数器
         for name, value in kwargs.items():
             setattr(self, name, value)
-            self._defaults[name] = value 
-            
-        #---------------------------------------------------#
+            self._defaults[name] = value
+
+            #---------------------------------------------------#
         #   获得种类和先验框的数量
         #---------------------------------------------------#
         self.class_names, self.num_classes  = get_classes(self.classes_path)
@@ -156,10 +157,10 @@ class YOLO(object):
             #---------------------------------------------------------#
             #   将预测框进行堆叠，然后进行非极大抑制
             #---------------------------------------------------------#
-            results = self.bbox_util.non_max_suppression(torch.cat(outputs, 1), self.num_classes, self.input_shape, 
-                        image_shape, self.letterbox_image, conf_thres = self.confidence, nms_thres = self.nms_iou)
-                                                    
-            if results[0] is None: 
+            results = self.bbox_util.non_max_suppression(torch.cat(outputs, 1), self.num_classes, self.input_shape,
+                                                         image_shape, self.letterbox_image, conf_thres = self.confidence, nms_thres = self.nms_iou)
+
+            if results[0] is None:
                 return image
 
             top_label   = np.array(results[0][:, 6], dtype = 'int32')
@@ -192,7 +193,7 @@ class YOLO(object):
                 left    = max(0, np.floor(left).astype('int32'))
                 bottom  = min(image.size[1], np.floor(bottom).astype('int32'))
                 right   = min(image.size[0], np.floor(right).astype('int32'))
-                
+
                 dir_save_path = "img_crop"
                 if not os.path.exists(dir_save_path):
                     os.makedirs(dir_save_path)
@@ -224,7 +225,7 @@ class YOLO(object):
             label_size = draw.textsize(label, font)
             label = label.encode('utf-8')
             #print(label, top, left, bottom, right)
-            
+
             if top - label_size[1] >= 0:
                 text_origin = np.array([left, top - label_size[1]])
             else:
@@ -246,6 +247,8 @@ class YOLO(object):
 
                 # 如果位移或形变超过阈值，并且可以发送，则保存图片
                 if (displacement > 25 or scale_change > 10) and (current_time - self.last_capture_time > self.capture_interval):
+                    global_var.can_record = 1
+                    print("可以录制了")
                     if can_send:  # 只有在可以发送时才发送
                         timestamp = int(time.time())
                         filename = f"{timestamp}_1_movementDetected.png"
@@ -297,9 +300,9 @@ class YOLO(object):
             #---------------------------------------------------------#
             #   将预测框进行堆叠，然后进行非极大抑制
             #---------------------------------------------------------#
-            results = self.bbox_util.non_max_suppression(torch.cat(outputs, 1), self.num_classes, self.input_shape, 
-                        image_shape, self.letterbox_image, conf_thres=self.confidence, nms_thres=self.nms_iou)
-                                                    
+            results = self.bbox_util.non_max_suppression(torch.cat(outputs, 1), self.num_classes, self.input_shape,
+                                                         image_shape, self.letterbox_image, conf_thres=self.confidence, nms_thres=self.nms_iou)
+
         t1 = time.time()
         for _ in range(test_interval):
             with torch.no_grad():
@@ -311,9 +314,9 @@ class YOLO(object):
                 #---------------------------------------------------------#
                 #   将预测框进行堆叠，然后进行非极大抑制
                 #---------------------------------------------------------#
-                results = self.bbox_util.non_max_suppression(torch.cat(outputs, 1), self.num_classes, self.input_shape, 
-                            image_shape, self.letterbox_image, conf_thres=self.confidence, nms_thres=self.nms_iou)
-                            
+                results = self.bbox_util.non_max_suppression(torch.cat(outputs, 1), self.num_classes, self.input_shape,
+                                                             image_shape, self.letterbox_image, conf_thres=self.confidence, nms_thres=self.nms_iou)
+
         t2 = time.time()
         tact_time = (t2 - t1) / test_interval
         return tact_time
@@ -347,7 +350,7 @@ class YOLO(object):
             #   将图像输入网络当中进行预测！
             #---------------------------------------------------------#
             outputs = self.net(images)
-        
+
         plt.imshow(image, alpha=1)
         plt.axis('off')
         mask    = np.zeros((image.size[1], image.size[0]))
@@ -359,7 +362,7 @@ class YOLO(object):
             score      = cv2.resize(score, (image.size[0], image.size[1]))
             normed_score    = (score * 255).astype('uint8')
             mask            = np.maximum(mask, normed_score)
-            
+
         plt.imshow(mask, alpha=0.5, interpolation='nearest', cmap="jet")
 
         plt.axis('off')
@@ -376,19 +379,19 @@ class YOLO(object):
         im                  = torch.zeros(1, 3, *self.input_shape).to('cpu')  # image size(1, 3, 512, 512) BCHW
         input_layer_names   = ["images"]
         output_layer_names  = ["output"]
-        
+
         # Export the model
         print(f'Starting export with onnx {onnx.__version__}.')
         torch.onnx.export(self.net,
-                        im,
-                        f               = model_path,
-                        verbose         = False,
-                        opset_version   = 12,
-                        training        = torch.onnx.TrainingMode.EVAL,
-                        do_constant_folding = True,
-                        input_names     = input_layer_names,
-                        output_names    = output_layer_names,
-                        dynamic_axes    = None)
+                          im,
+                          f               = model_path,
+                          verbose         = False,
+                          opset_version   = 12,
+                          training        = torch.onnx.TrainingMode.EVAL,
+                          do_constant_folding = True,
+                          input_names     = input_layer_names,
+                          output_names    = output_layer_names,
+                          dynamic_axes    = None)
 
         # Checks
         model_onnx = onnx.load(model_path)  # load onnx model
@@ -408,7 +411,7 @@ class YOLO(object):
         print('Onnx model save as {}'.format(model_path))
 
     def get_map_txt(self, image_id, image, class_names, map_out_path):
-        f = open(os.path.join(map_out_path, "detection-results/"+image_id+".txt"), "w", encoding='utf-8') 
+        f = open(os.path.join(map_out_path, "detection-results/"+image_id+".txt"), "w", encoding='utf-8')
         image_shape = np.array(np.shape(image)[0:2])
         #---------------------------------------------------------#
         #   在这里将图像转换成RGB图像，防止灰度图在预测时报错。
@@ -437,11 +440,11 @@ class YOLO(object):
             #---------------------------------------------------------#
             #   将预测框进行堆叠，然后进行非极大抑制
             #---------------------------------------------------------#
-            results = self.bbox_util.non_max_suppression(torch.cat(outputs, 1), self.num_classes, self.input_shape, 
-                        image_shape, self.letterbox_image, conf_thres = self.confidence, nms_thres = self.nms_iou)
-                                                    
-            if results[0] is None: 
-                return 
+            results = self.bbox_util.non_max_suppression(torch.cat(outputs, 1), self.num_classes, self.input_shape,
+                                                         image_shape, self.letterbox_image, conf_thres = self.confidence, nms_thres = self.nms_iou)
+
+            if results[0] is None:
+                return
 
             top_label   = np.array(results[0][:, 6], dtype = 'int32')
             top_conf    = results[0][:, 4] * results[0][:, 5]
@@ -459,7 +462,7 @@ class YOLO(object):
             f.write("%s %s %s %s %s %s\n" % (predicted_class, score[:6], str(int(left)), str(int(top)), str(int(right)),str(int(bottom))))
 
         f.close()
-        return 
+        return
 
 class YOLO_ONNX(object):
     _defaults = {
@@ -497,7 +500,7 @@ class YOLO_ONNX(object):
         #---------------------------------------------------------------------#
         "letterbox_image"   : True
     }
-    
+
     @classmethod
     def get_defaults(cls, n):
         if n in cls._defaults:
@@ -512,8 +515,8 @@ class YOLO_ONNX(object):
         self.__dict__.update(self._defaults)
         for name, value in kwargs.items():
             setattr(self, name, value)
-            self._defaults[name] = value 
-            
+            self._defaults[name] = value
+
         import onnxruntime
         self.onnx_session   = onnxruntime.InferenceSession(self.onnx_path)
         # 获得所有的输入node
@@ -536,13 +539,13 @@ class YOLO_ONNX(object):
         self.colors = list(map(lambda x: (int(x[0] * 255), int(x[1] * 255), int(x[2] * 255)), self.colors))
 
         show_config(**self._defaults)
- 
+
     def get_classes(self, classes_path):
         with open(classes_path, encoding='utf-8') as f:
             class_names = f.readlines()
         class_names = [c.strip() for c in class_names]
         return class_names, len(class_names)
-    
+
     def get_anchors(self, anchors_path):
         '''loads the anchors from a file'''
         with open(anchors_path, encoding='utf-8') as f:
@@ -557,21 +560,21 @@ class YOLO_ONNX(object):
         for node in self.onnx_session.get_inputs():
             input_name.append(node.name)
         return input_name
- 
+
     def get_output_name(self):
         # 获得所有的输出node
         output_name=[]
         for node in self.onnx_session.get_outputs():
             output_name.append(node.name)
         return output_name
- 
+
     def get_input_feed(self,image_tensor):
         # 利用input_name获得输入的tensor
         input_feed={}
         for name in self.input_name:
             input_feed[name]=image_tensor
         return input_feed
-    
+
     #---------------------------------------------------#
     #   对输入图像进行resize
     #---------------------------------------------------#
@@ -607,21 +610,21 @@ class YOLO_ONNX(object):
                 dw, dh      = size[1] - new_unpad[0], size[0] - new_unpad[1]
 
                 # 除以2以padding到两边
-                dw          /= 2  
+                dw          /= 2
                 dh          /= 2
-        
+
                 # 对图像进行resize
                 if shape[::-1] != new_unpad:  # resize
                     image = cv2.resize(image, new_unpad, interpolation=cv2.INTER_LINEAR)
                 top, bottom = int(round(dh - 0.1)), int(round(dh + 0.1))
                 left, right = int(round(dw - 0.1)), int(round(dw + 0.1))
-        
+
                 new_image = cv2.copyMakeBorder(image, top, bottom, left, right, cv2.BORDER_CONSTANT, value=(128, 128, 128))  # add border
             else:
                 new_image = cv2.resize(image, (w, h))
 
         return new_image
- 
+
     def detect_image(self, image):
         image_shape = np.array(np.shape(image)[0:2])
         #---------------------------------------------------------#
@@ -629,29 +632,29 @@ class YOLO_ONNX(object):
         #   代码仅仅支持RGB图像的预测，所有其它类型的图像都会转化成RGB
         #---------------------------------------------------------#
         image       = cvtColor(image)
- 
+
         image_data  = self.resize_image(image, self.input_shape, True)
         #---------------------------------------------------------#
         #   添加上batch_size维度
         #   h, w, 3 => 3, h, w => 1, 3, h, w
         #---------------------------------------------------------#
         image_data  = np.expand_dims(np.transpose(preprocess_input(np.array(image_data, dtype='float32')), (2, 0, 1)), 0)
- 
+
         input_feed  = self.get_input_feed(image_data)
         outputs     = self.onnx_session.run(output_names=self.output_name, input_feed=input_feed)
 
         feature_map_shape   = [[int(j / (2 ** (i + 3))) for j in self.input_shape] for i in range(len(self.anchors_mask))][::-1]
         for i in range(len(self.anchors_mask)):
             outputs[i] = np.reshape(outputs[i], (1, len(self.anchors_mask[i]) * (5 + self.num_classes), feature_map_shape[i][0], feature_map_shape[i][1]))
-        
+
         outputs = self.bbox_util.decode_box(outputs)
         #---------------------------------------------------------#
         #   将预测框进行堆叠，然后进行非极大抑制
         #---------------------------------------------------------#
-        results = self.bbox_util.non_max_suppression(np.concatenate(outputs, 1), self.num_classes, self.input_shape, 
-                    image_shape, self.letterbox_image, conf_thres = self.confidence, nms_thres = self.nms_iou)
-                                                
-        if results[0] is None: 
+        results = self.bbox_util.non_max_suppression(np.concatenate(outputs, 1), self.num_classes, self.input_shape,
+                                                     image_shape, self.letterbox_image, conf_thres = self.confidence, nms_thres = self.nms_iou)
+
+        if results[0] is None:
             return image
 
         top_label   = np.array(results[0][:, 6], dtype = 'int32')
@@ -684,7 +687,7 @@ class YOLO_ONNX(object):
             label_size = draw.textsize(label, font)
             label = label.encode('utf-8')
             print(label, top, left, bottom, right)
-            
+
             if top - label_size[1] >= 0:
                 text_origin = np.array([left, top - label_size[1]])
             else:
