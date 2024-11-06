@@ -253,8 +253,12 @@ class YOLO(object):
                         timestamp = int(time.time())
                         filename = f"{timestamp}_1_movementDetected.png"
                         filepath = os.path.join(dir_path, filename)
-                        image.save(filepath, quality=95, subsampling=0)
-                        print(f"运动幅度较大，截图已保存：{filename}")
+                        # 调整图像尺寸（如果需要）
+                        image_resized = image.resize((640, 480))  # 根据需要调整尺寸
+                        # 保存为JPEG格式，压缩质量为85
+                        image_resized.save(filepath, format='JPEG', quality=85, subsampling=0)
+                        global_var.img_size_kb = os.path.getsize(filepath) / 1024
+                        print(f"监测到人移动！生成截图文件：{filename}，图片大小：{global_var.img_size_kb:.2f} KB")
                         self.last_capture_time = current_time
 
                         # 创建 MovementData 对象并发送数据
