@@ -8,7 +8,7 @@ def upload_to_ftp(filepath, server, username, password, ftp_dir):
         ftp.connect(server, 21)  # 默认 FTP 端口是 21
         ftp.login(username, password)  # 登录
         print(f"成功登录到 FTP 服务器 {server}")
-        ftp.set_pasv(False)
+        # ftp.set_pasv(False)
 
         # 打开调试信息
         # ftp.set_debuglevel(2)
