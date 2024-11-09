@@ -1,3 +1,4 @@
+import threading
 from ftplib import FTP
 import os
 
@@ -8,7 +9,7 @@ def upload_to_ftp(filepath, server, username, password, ftp_dir):
         ftp.connect(server, 21)  # 默认 FTP 端口是 21
         ftp.login(username, password)  # 登录
         print(f"成功登录到 FTP 服务器 {server}")
-        # ftp.set_pasv(False)
+        ftp.set_pasv(False)
 
         # 打开调试信息
         # ftp.set_debuglevel(2)
@@ -35,3 +36,7 @@ def upload_to_ftp(filepath, server, username, password, ftp_dir):
         print(f"FTP 上传失败: {e}")
     finally:
         ftp.quit()  # 退出 FTP 连接
+
+def upload_to_ftp_threaded(filepath, server, username, password, ftp_dir):
+    thread = threading.Thread(target=upload_to_ftp, args=(filepath, server, username, password, ftp_dir))
+    thread.start()  # 启动线程

@@ -2,13 +2,13 @@ import colorsys
 import os
 import time
 import global_var
-import cv2
+import threading
 import numpy as np
 import torch
 import torch.nn as nn
 from PIL import ImageDraw, ImageFont, Image
 from nets.yolo import YoloBody
-from upload_to_ftp import upload_to_ftp
+from upload_to_ftp import upload_to_ftp_threaded
 from utils.utils import (cvtColor, get_anchors, get_classes, preprocess_input,
                          resize_image, show_config)
 from utils.utils_bbox import DecodeBox, DecodeBoxNP
@@ -229,16 +229,15 @@ class YOLO(object):
                         print(f"监测到人移动！生成截图文件：{filename}，图片大小：{global_var.img_size_kb:.2f} KB")
                         self.last_capture_time = current_time
 
-                        # 创建 MovementData 对象并发送数据
+                        # 数传接口
                         # movement_data = movement_sender.MovementData(os.path.join(dir_path, filename))
                         # movement_sender.send_movement_data(movement_data)
+                        # ftp接口
                         # upload_to_ftp(filepath, server='172.20.10.2', username='t1', password='123456', ftp_dir='/detected_img_dir')
-                        upload_to_ftp(filepath, server='59.110.238.62', username='Bjut_sat', password='123456', ftp_dir='/home/Bjut_sat/ftp/uploads')
-                        # upload_to_ftp(filepath, server='43.16.36.101', username='ftp', password='Cestc@2022', ftp_dir='/yunwangronghe')
-
-                    can_send = False  # 发送后禁用
-                else:
-                    can_send = True  # 允许再次发送
+                        upload_to_ftp_threaded(filepath, server='59.110.238.62', username='Bjut_sat', password='123456', ftp_dir='/home/Bjut_sat/ftp/uploads')
+                        can_send = False  # 发送后禁用
+                    else:
+                        can_send = True  # 允许再次发送
 
             # 更新上一次的框位置
             self.previous_box = (top, left, bottom, right)

@@ -96,7 +96,4 @@ if __name__ == "__main__":
 
         print("Video Detection Done!")
         capture.release()
-        if filepath != "" and out is not None:
-            print("Save processed video to the path :" + filepath)
-            out.release()
         cv2.destroyAllWindows()
