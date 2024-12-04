@@ -7,6 +7,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 from PIL import ImageDraw, ImageFont, Image
+
+import movement_sender
 from nets.yolo import YoloBody
 from upload_to_ftp import upload_to_ftp_threaded
 from utils.utils import (cvtColor, get_anchors, get_classes, preprocess_input,
@@ -45,7 +47,7 @@ class YOLO(object):
         #---------------------------------------------------------------------#
         #   只有得分大于置信度的预测框会被保留下来
         #---------------------------------------------------------------------#
-        "confidence"        : 0.5,
+        "confidence"        : 0.6,
         #---------------------------------------------------------------------#
         #   非极大抑制所用到的nms_iou大小
         #---------------------------------------------------------------------#
@@ -121,7 +123,7 @@ class YOLO(object):
     #   检测图片
     #---------------------------------------------------#
     def detect_image(self, image):
-        dir_path = "D:\\yolov7-pytorch-master\\moved_detected_img"
+        dir_path = "D:\\yolov7-pytorch-shuchuan\\moved_detected_img"
         #---------------------------------------------------#
         #   计算输入图片的高和宽
         #---------------------------------------------------#
@@ -204,7 +206,6 @@ class YOLO(object):
             draw.rectangle([tuple(text_origin), tuple(text_origin + label_size)], fill=self.colors[c])
             draw.text(text_origin, str(label,'UTF-8'), fill=(0, 0, 0), font=font)
             del draw
-            #time.sleep(1)
 
             current_time = time.time()
             # 计算与前一帧的位移
@@ -214,7 +215,7 @@ class YOLO(object):
                 scale_change = abs((bottom - top) - (prev_bottom - prev_top))
 
                 # 如果位移或形变超过阈值，并且可以发送，则保存图片
-                if (displacement > 25 or scale_change > 10) and (current_time - self.last_capture_time > self.capture_interval):
+                if (displacement > 50 or scale_change > 25) and (current_time - self.last_capture_time > self.capture_interval):
                     global_var.can_record = 1
                     print("可以录制了")
                     if can_send:  # 只有在可以发送时才发送
@@ -231,10 +232,10 @@ class YOLO(object):
 
                         # 数传接口
                         # movement_data = movement_sender.MovementData(os.path.join(dir_path, filename))
-                        # movement_sender.send_movement_data(movement_data)
+                        # movement_sender.send_single_movement(movement_data)
                         # ftp接口
-                        # upload_to_ftp(filepath, server='172.20.10.2', username='t1', password='123456', ftp_dir='/detected_img_dir')
-                        upload_to_ftp_threaded(filepath, server='59.110.238.62', username='Bjut_sat', password='123456', ftp_dir='/home/Bjut_sat/ftp/uploads')
+                        # upload_to_ftp_threaded(filepath, server='59.110.238.62', username='Bjut_sat', password='123456', ftp_dir='/home/Bjut_sat/ftp/uploads')
+                        # upload_to_ftp_threaded(filepath, server='25.25.25.2', username='t1', password='123456', ftp_dir='/detected_img_dir')
                         can_send = False  # 发送后禁用
                     else:
                         can_send = True  # 允许再次发送

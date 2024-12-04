@@ -9,6 +9,7 @@ logs/
 model_data/
 .temp_map_out/
 video_output.mp4
+Dockerfile
 moved_detected_img/
 detected_video/
 # Byte-compiled / optimized / DLL files

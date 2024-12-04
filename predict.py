@@ -1,7 +1,3 @@
-#-----------------------------------------------------------------------#
-#   predict.py将单张图片预测、摄像头检测、FPS测试和目录遍历检测等功能
-#   整合到了一个py文件中，通过指定mode进行模式的修改。
-#-----------------------------------------------------------------------#
 import time
 import cv2
 import os
@@ -12,29 +8,19 @@ from PIL import Image
 from yolo import YOLO
 
 if __name__ == "__main__":
-    #----------------------------------------------------------------------------------------------------------#
     mode = "video"
-    #----------------------------------------------------------------------------------------------------------#
-    #   video_path          用于指定视频的路径，当video_path=0时表示检测摄像头
-    #                       想要检测视频，则设置如video_path = "xxx.mp4"即可，代表读取出根目录下的xxx.mp4文件。
-    #   video_save_path     表示视频保存的路径，当video_save_path=""时表示不保存
-    #                       想要保存视频，则设置如video_save_path = "yyy.mp4"即可，代表保存为根目录下的yyy.mp4文件。
-    #   video_fps           用于保存的视频的fps
-    #
-    #   video_path、video_save_path和video_fps仅在mode='video'时有效
-    #   保存视频时需要ctrl+c退出或者运行到最后一帧才会完成完整的保存步骤。
-    #----------------------------------------------------------------------------------------------------------#
-    video_path      = 0
+    video_path = 0
     video_save_path = "detected_video/"
-    video_fps       = 17.0
+    video_fps = 17.0
     yolo = YOLO()
 
     if mode == "video":
-        dir_path = "D:\\yolov7-pytorch-master\\detected_video"
+        dir_path = "D:\\yolov7-pytorch-shuchuan\\detected_video"
         capture = cv2.VideoCapture(video_path)
         out = None
         video_start_time = None
         is_recording = False
+        frame_count = 0  # 新增，用于记录帧数
 
         ref, frame = capture.read()
         if not ref:
@@ -43,6 +29,8 @@ if __name__ == "__main__":
         original_fps = capture.get(cv2.CAP_PROP_FPS)  # 获取原始FPS
         video_fps = original_fps  # 使用原始FPS作为视频录制的帧率
         fps = 0.0
+        target_frame_count = int(video_fps * 4)  # 根据帧率计算4秒对应的帧数
+
         while True:
             t1 = time.time()
             ref, frame = capture.read()
@@ -72,23 +60,23 @@ if __name__ == "__main__":
                 # 设置视频写入属性，包括较高的比特率和帧率
                 out = cv2.VideoWriter(filepath, fourcc, video_fps, size)
                 is_recording = True
+                frame_count = 0  # 开始录制时初始化帧数
                 print("开始录制视频")
 
             # 录制4秒的视频，确保在录制过程中保持can_record为1
             if is_recording:
-                elapsed_time = time.time() - video_start_time
-                if elapsed_time >= 4:
+                frame_count += 1  # 每循环一次，帧数加1
+                if frame_count >= target_frame_count:  # 根据帧数判断是否达到4秒
                     global_var.can_record = 0  # 结束录制后，停止can_record的控制
                     is_recording = False
                     out.release()
                     out = None
                     global_var.video_size_kb = os.path.getsize(filepath) / 1024
                     global_var.saved_memory = (global_var.video_size_kb - global_var.img_size_kb) / global_var.video_size_kb
-                    print(f"视频录制完成！生成视频文件：{filepath}，视频文件大小：{global_var.video_size_kb:.2f}KB，节省流量：{global_var.saved_memory * 100 : .2f}%")
+                    print(f"视频录制完成！生成视频文件：{filepath}，视频文件大小：{global_var.video_size_kb:.2f}KB，节省流量：{global_var.saved_memory * 100 :.2f}%")
                 else:
-                    if filepath != "" and global_var.can_record == 1 and is_recording:
+                    if filepath!= "" and global_var.can_record == 1 and is_recording:
                         out.write(frame)  # 继续写入帧
-                        c = cv2.waitKey(int(1000 / video_fps))
 
             if c == 27:  # ESC键
                 capture.release()
